@@ -1,0 +1,27 @@
+name: Cross-repo Blender shard experiment
+on:
+  push:
+    branches:
+      - 'render-farm/multi-20261018'
+permissions:
+  contents: read
+jobs:
+  shard1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render true Blender frames (experimental resolution)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y blender
+          mkdir -p "$RUNNER_TEMP/probe"
+          blender -b -noaudio -t 2 --python-exit-code 1 -P benchmarks/render_farm/probe_scene.py -- --shard 1 --out "$RUNNER_TEMP/probe"
+          python3 benchmarks/render_farm/verify_probe.py --folder "$RUNNER_TEMP/probe" --shard 1 --script benchmarks/render_farm/probe_scene.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: multi-worker-shard-1
+          path: |
+            ${{ runner.temp }}/probe/proof.json
+            ${{ runner.temp }}/probe/frame_*.png
+          retention-days: 1
